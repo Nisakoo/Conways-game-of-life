@@ -1,4 +1,5 @@
 import math
+import time
 import random
 
 import pygame as pg
@@ -7,7 +8,26 @@ import numpy as np
 import numba
 
 
-def draw(screen, cell, width, height, wline, colors):
+class Timer:
+    def __init__(self, interval):
+        self.interval = interval
+        self.last_time = time.time()
+
+    def check(self):
+        current_time = time.time()
+
+        if current_time - self.last_time >= self.interval:
+            self.last_time = current_time
+            return True
+        else:
+            return False
+
+
+def draw():
+    global screen, cell, width, height, wline, colors
+
+    calc = lambda cord: cord*(cell + wline)
+
     screen.fill(colors['background'])
 
     # Draw lines
@@ -26,8 +46,6 @@ def draw(screen, cell, width, height, wline, colors):
         )
         y += cell + wline
 
-    calc = lambda cord: cord*(cell + wline)
-
     # Draw map
     for y, i in enumerate(map):
         for x, j in enumerate(i):
@@ -37,12 +55,19 @@ def draw(screen, cell, width, height, wline, colors):
                     pg.Rect(calc(x), calc(y), cell, cell)
                 )
 
+    # Draw cursor
+    x, y = get_mouse_position_on_map()
+    pg.draw.rect(
+        screen, colors['line'],
+        pg.Rect(calc(x), calc(y), cell, cell)
+    )
+
     pg.display.update()
 
-def update(simulate, checking_zone, sbrules):
-    global map
+def update():
+    global map, simulate, checking_zone, sbrules, check_cells_timer
 
-    if simulate:
+    if simulate and check_cells_timer.check():
         map = check_cells(map, checking_zone, sbrules)
 
 @numba.njit(fastmath=True)
@@ -90,6 +115,14 @@ def generate_map(cell, width, height):
 
     return map
 
+def get_mouse_position_on_map():
+    pos = pg.mouse.get_pos()
+
+    x = math.floor(pos[0]/(cell + wline))
+    y = math.floor(pos[1]/(cell + wline))
+
+    return (x, y)
+
 pg.init()
 
 # Color palette
@@ -101,7 +134,7 @@ colors = {
 
 # Display settings
 height, width = 720, 1280
-FPS = 15
+FPS = 60
 
 # Game settings
 run = True
@@ -118,8 +151,13 @@ checking_zone = np.array([
     (1, 0), (-1, 1), (0, 1), (1, 1)
 ])
 
+# Interval in seconds
+check_cells_timer = Timer(.2)
+
 map = generate_map(cell, width, height)
 print('map:\n', map)
+
+pg.mouse.set_visible(False)
 
 screen = pg.display.set_mode((width, height))
 pg.display.set_caption('I pay respect to John Horton Conway')
@@ -143,11 +181,9 @@ while run:
 
         if event.type == MOUSEBUTTONDOWN and not simulate:
             if event.button == 1:
-                pos = event.pos
-                x = math.floor(pos[0]/(cell + wline))
-                y = math.floor(pos[1]/(cell + wline))
+                x, y = get_mouse_position_on_map()
                 map[y][x] = not map[y][x]
 
     print(f'fps: {clock.get_fps():.2f}')
-    draw(screen, cell, width, height, wline, colors)
-    update(simulate, checking_zone, sbrules)
+    draw()
+    update()
