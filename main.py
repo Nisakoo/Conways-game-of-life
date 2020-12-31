@@ -56,8 +56,9 @@ def draw():
                 )
 
     # Draw cursor
-    x, y = get_mouse_position_on_map()
-    screen.blit(cursor, (calc(x), calc(y)))
+    if not simulate:
+        x, y = get_mouse_position_on_map()
+        screen.blit(cursor, (calc(x), calc(y)))
 
     pg.display.update()
 
@@ -188,16 +189,13 @@ while run:
             elif event.key == K_c:
                 map = np.zeros(map.shape)
 
-        if event.type == MOUSEBUTTONDOWN and not simulate:
-            # Create cell
-            if event.button == 1:
-                x, y = get_mouse_position_on_map()
-                map[y][x] = 1
-            # Delete cell
-            elif event.button == 3:
-                x, y = get_mouse_position_on_map()
-                map[y][x] = 0
+    mouse_buttons = pg.mouse.get_pressed()
+    if not simulate:
+        if mouse_buttons[0]:
+            x, y = get_mouse_position_on_map()
+            map[y][x] = 1
 
-    print(f'fps: {clock.get_fps():.2f}')
+
+    # print(f'fps: {clock.get_fps():.2f}')
     draw()
     update()
