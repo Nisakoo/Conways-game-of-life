@@ -23,8 +23,39 @@ class Timer:
             return False
 
 
+class MouseControl:
+    def get_mouse_position_on_map(self, pos=None):
+        if pos is None:
+            pos = pg.mouse.get_pos()
+
+            x = math.floor(pos[0]/(cell + wline))
+            y = math.floor(pos[1]/(cell + wline))
+
+            return (x, y)
+        else:
+            x = math.floor(pos[0]/(cell + wline))
+            y = math.floor(pos[1]/(cell + wline))
+
+            return (x, y)
+
+    def remember_pos(self):
+        self.remembered_pos = np.array(pg.mouse.get_pos())
+
+    def get_remembered_pos(self):
+        return self.get_mouse_position_on_map(self.remembered_pos)
+
+    def get_mouse_offset(self):
+        self.new_pos = np.array(pg.mouse.get_pos())
+
+        x, y = self.get_mouse_position_on_map(
+            self.remembered_pos - self.new_pos
+        )
+
+        return (x, y)
+
+
 def draw():
-    global screen, cell, width, height, wline, colors, cursor
+    global screen, cell, width, height, wline, colors, cursor, mouse_control
 
     calc = lambda cord: cord*(cell + wline)
 
@@ -57,7 +88,7 @@ def draw():
 
     # Draw cursor
     if not simulate:
-        x, y = get_mouse_position_on_map()
+        x, y = mouse_control.get_mouse_position_on_map()
         screen.blit(cursor, (calc(x), calc(y)))
 
     pg.display.update()
@@ -113,20 +144,6 @@ def generate_map(cell, width, height):
 
     return map
 
-def get_mouse_position_on_map(pos=None):
-    if pos is None:
-        pos = pg.mouse.get_pos()
-
-        x = math.floor(pos[0]/(cell + wline))
-        y = math.floor(pos[1]/(cell + wline))
-
-        return (x, y)
-    else:
-        x = math.floor(pos[0]/(cell + wline))
-        y = math.floor(pos[1]/(cell + wline))
-
-        return (x, y)
-
 pg.init()
 
 # Color palette
@@ -157,7 +174,7 @@ checking_zone = np.array([
 ])
 
 # Interval in seconds
-check_cells_timer = Timer(.5)
+check_cells_timer = Timer(.2)
 
 map = generate_map(cell, width, height)
 print('map:\n', map)
@@ -168,6 +185,8 @@ cursor.fill(colors['cursor'])
 cursor.set_alpha(128)
 # Hide cursor
 pg.mouse.set_visible(False)
+
+mouse_control = MouseControl()
 
 screen = pg.display.set_mode((width, height))
 pg.display.set_caption('I pay respect to John Horton Conway')
@@ -189,11 +208,16 @@ while run:
             elif event.key == K_c:
                 map = np.zeros(map.shape)
 
-    mouse_buttons = pg.mouse.get_pressed()
     if not simulate:
+        mouse_buttons = pg.mouse.get_pressed()
+        # Create cell
         if mouse_buttons[0]:
-            x, y = get_mouse_position_on_map()
+            x, y = mouse_control.get_mouse_position_on_map()
             map[y][x] = 1
+        # Delete cell
+        elif mouse_buttons[2]:
+            x, y = mouse_control.get_mouse_position_on_map()
+            map[y][x] = 0
 
 
     # print(f'fps: {clock.get_fps():.2f}')
