@@ -24,7 +24,7 @@ class Timer:
 
 
 def draw():
-    global screen, cell, width, height, wline, colors
+    global screen, cell, width, height, wline, colors, cursor
 
     calc = lambda cord: cord*(cell + wline)
 
@@ -57,10 +57,7 @@ def draw():
 
     # Draw cursor
     x, y = get_mouse_position_on_map()
-    pg.draw.rect(
-        screen, colors['line'],
-        pg.Rect(calc(x), calc(y), cell, cell)
-    )
+    screen.blit(cursor, (calc(x), calc(y)))
 
     pg.display.update()
 
@@ -115,13 +112,19 @@ def generate_map(cell, width, height):
 
     return map
 
-def get_mouse_position_on_map():
-    pos = pg.mouse.get_pos()
+def get_mouse_position_on_map(pos=None):
+    if pos is None:
+        pos = pg.mouse.get_pos()
 
-    x = math.floor(pos[0]/(cell + wline))
-    y = math.floor(pos[1]/(cell + wline))
+        x = math.floor(pos[0]/(cell + wline))
+        y = math.floor(pos[1]/(cell + wline))
 
-    return (x, y)
+        return (x, y)
+    else:
+        x = math.floor(pos[0]/(cell + wline))
+        y = math.floor(pos[1]/(cell + wline))
+
+        return (x, y)
 
 pg.init()
 
@@ -129,7 +132,8 @@ pg.init()
 colors = {
     'background': pg.Color('#2F4858'),
     'line': pg.Color('#33658A'),
-    'cell': pg.Color('#86BBD8')
+    'cell': pg.Color('#86BBD8'),
+    'cursor': pg.Color('green')
 }
 
 # Display settings
@@ -152,11 +156,16 @@ checking_zone = np.array([
 ])
 
 # Interval in seconds
-check_cells_timer = Timer(.2)
+check_cells_timer = Timer(.5)
 
 map = generate_map(cell, width, height)
 print('map:\n', map)
 
+# Cursor
+cursor = pg.Surface((cell, cell))
+cursor.fill(colors['cursor'])
+cursor.set_alpha(128)
+# Hide cursor
 pg.mouse.set_visible(False)
 
 screen = pg.display.set_mode((width, height))
@@ -174,15 +183,20 @@ while run:
             # Regenerate map
             if event.key == K_r:
                 map = generate_map(cell, width, height)
-            elif event.key == K_d:
+            elif event.key == K_e:
                 simulate = not simulate
             elif event.key == K_c:
                 map = np.zeros(map.shape)
 
         if event.type == MOUSEBUTTONDOWN and not simulate:
+            # Create cell
             if event.button == 1:
                 x, y = get_mouse_position_on_map()
-                map[y][x] = not map[y][x]
+                map[y][x] = 1
+            # Delete cell
+            elif event.button == 3:
+                x, y = get_mouse_position_on_map()
+                map[y][x] = 0
 
     print(f'fps: {clock.get_fps():.2f}')
     draw()
